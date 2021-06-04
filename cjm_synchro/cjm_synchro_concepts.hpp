@@ -105,20 +105,33 @@ namespace cjm::synchro::concepts
 	concept timed_shared_mutex = 
 		shared_mutex<TTimedSharedMutex> && timed_mutex<TTimedSharedMutex, TDuration, TTimePoint>;
 
-	
+	template<typename TUpgradeMutex>
+	concept upgrade_mutex = shared_mutex<TUpgradeMutex> && upgrade_lockable<TUpgradeMutex>;
+
+	enum class mutex_level
+	{
+		basic=0,
+		shared,
+		upgrade
+	};
+
+	enum class lock_state
+	{
+		none=0,
+		shared,
+		upgrade,
+		exclusive
+	};
 	
 	template<mutex TMutex>
 	struct mutex_traits
 	{
 		template<duration TDuration, time_point TTime>
 		static constexpr bool supports_exclusive_timed_locks_with = timed_mutex<TMutex, TDuration, TTime>;
+
 		static constexpr bool is_shared = shared_mutex<TMutex>;
 		static constexpr bool is_timed = timed_mutex<TMutex>;
 		static constexpr bool is_upgrade = upgrade_mutex<TMutex>;
-		static constexpr bool supports_condition_variable = std::is_same_v<std::remove_cvref_t<TMutex>, std::mutex>;
-
-		
-		
 		
 	};
 };
