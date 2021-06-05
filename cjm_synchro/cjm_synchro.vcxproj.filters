@@ -18,6 +18,9 @@
     <ClCompile Include="cjm_synchro.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="cjm_synchro_syncbase.hpp">
+      <Filter>Header Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="cjm_synchro_concepts.hpp">

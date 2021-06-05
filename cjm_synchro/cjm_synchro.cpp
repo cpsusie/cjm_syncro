@@ -4,9 +4,13 @@
 #include <mutex>
 #include <iostream>
 #include "cjm_synchro_concepts.hpp"
+#include "cjm_synchro_syncbase.hpp"
 #include <chrono>
 #include <boost/thread/mutex.hpp>
 #include <boost/thread/shared_mutex.hpp>
+
+
+void test_upgrade_mutex();
 
 
 int main()
@@ -32,16 +36,11 @@ int main()
 	static_assert(mutex<std::shared_timed_mutex>);
 	static_assert(mutex<std::recursive_timed_mutex>);
 
-	static_assert(timed_mutex<boost::timed_mutex, boost::chrono::microseconds, boost::chrono::steady_clock::time_point>);
-	static_assert(timed_mutex<boost::shared_timed_mutex, boost::chrono::microseconds, boost::chrono::steady_clock::time_point>);
-	static_assert(timed_mutex<std::timed_mutex, std::chrono::microseconds, std::chrono::steady_clock::time_point>);
-	static_assert(timed_mutex<std::recursive_timed_mutex, std::chrono::microseconds, std::chrono::steady_clock::time_point>);
-	static_assert(timed_mutex<std::shared_timed_mutex, std::chrono::microseconds, std::chrono::steady_clock::time_point>);
-	static_assert(!timed_mutex<std::timed_mutex, short, std::chrono::steady_clock::time_point>);
-	static_assert(!timed_mutex<std::timed_mutex, std::chrono::microseconds, int>);
-	static_assert(!timed_mutex<std::mutex, std::chrono::microseconds, std::chrono::steady_clock::time_point>);
-	static_assert(!timed_mutex<std::recursive_mutex, std::chrono::microseconds, std::chrono::steady_clock::time_point>);
-	static_assert(!timed_mutex<std::shared_mutex, std::chrono::microseconds, std::chrono::steady_clock::time_point>);
+	static_assert(timed_mutex<boost::timed_mutex>);
+	static_assert(timed_mutex<boost::shared_timed_mutex>);
+	static_assert(timed_mutex<std::timed_mutex>);
+	static_assert(timed_mutex<std::recursive_timed_mutex>);
+	static_assert(timed_mutex<std::shared_timed_mutex>);
 
 	static_assert(shared_mutex<std::shared_mutex>);
 	static_assert(shared_mutex<std::shared_timed_mutex>);
@@ -50,9 +49,48 @@ int main()
 	static_assert(!shared_mutex<std::timed_mutex>);
 	static_assert(!shared_mutex<boost::mutex>);
 	static_assert(shared_mutex<boost::upgrade_mutex>);
+
+	static_assert(upgrade_mutex<boost::upgrade_mutex>);
+	//static_assert(upgrade_timed_lockable<boost::upgrade_mutex, boost::chrono::microseconds, boost::chrono::steady_clock::time_point>);
+
+	static_assert(level_v<std::mutex> == mutex_level::std_mutex);
+	static_assert(level_v<std::timed_mutex> == mutex_level::basic);
+	static_assert(level_v<std::recursive_mutex> == mutex_level::basic);
+	static_assert(level_v<std::shared_mutex> == mutex_level::shared);
+	static_assert(level_v<std::shared_timed_mutex> == mutex_level::shared);
+	static_assert(level_v<boost::upgrade_mutex> == mutex_level::upgrade);
+	static_assert(level_v<boost::shared_timed_mutex> == mutex_level::upgrade);
+
+	static_assert(time_library_v<std::mutex> == time_type::not_timed_or_unknown);
+	constexpr auto bm_val = time_library_v<boost::mutex>;
+	static_assert(bm_val == time_type::not_timed_or_unknown || bm_val == time_type::boost);
+	static_assert(time_library_v<std::timed_mutex> == time_type::std);
+	static_assert(time_library_v<boost::timed_mutex> == time_type::boost);
+	static_assert(time_library_v<std::shared_mutex> == time_type::not_timed_or_unknown);
+	static_assert(time_library_v<std::shared_timed_mutex> == time_type::std);
+
+	auto level = mutex_traits<boost::shared_timed_mutex>::get_time_type();
+
+	std::cout << "Boost shared: " << static_cast<size_t>(level) << "." << newl;
 	
 	
 	return 0;
+	
+}
+
+void test_upgrade_mutex()
+{
+	auto um = boost::upgrade_mutex{};
+	um.lock_upgrade();
+	um.unlock_upgrade();
+	bool ok = um.try_lock_upgrade();
+	um.unlock_upgrade();
+	um.unlock_and_lock_shared();
+	um.unlock_and_lock_upgrade();
+	um.unlock_upgrade_and_lock();
+	um.unlock_upgrade_and_lock_shared();
+	
+	
 	
 }
 
