@@ -371,9 +371,11 @@ namespace cjm::synchro::concepts
 	static constexpr time_type time_library_v = mutex_traits<TMutex>::template get_time_type_for_level<Level>();
 
 	
-	
-	
+}
 
-	
+namespace cjm::concepts
+{
+	template<typename T, typename...Args>
+	concept nothrow_constructible_from = std::constructible_from<T, Args...> && std::is_nothrow_constructible_v<T, Args...>;
 }
 #endif

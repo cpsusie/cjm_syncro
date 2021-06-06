@@ -10,12 +10,63 @@
 namespace cjm::synchro::detail
 {
 
+	
+
+	template<typename TLocked, concepts::mutex TMutex, concepts::mutex_level Level>
+	class ctrl_block_base;
+	
+	
 	template<typename TLocked, concepts::mutex TMutex, concepts::mutex_level Level>
 	class locked_ptr_base;
 
 	template<typename TLocked, concepts::mutex TMutex, concepts::mutex_level Level>
 	class scoped_unlock;
+
+	template<typename TLocked, concepts::mutex TMutex, concepts::mutex_level Level>
+	class synchro_vault_base;
 	
+	template<typename TLocked>
+	class ctrl_block_base<TLocked, std::mutex, concepts::mutex_level::std_mutex>
+	{
+	public:
+		using scoped_unlock_t = scoped_unlock<TLocked, std::mutex, concepts::mutex_level::std_mutex>;
+		using locked_t = std::remove_reference_t<TLocked>;
+		using mutex_t = std::mutex;
+		using lock_t = std::unique_lock<std::mutex>;
+		using condition_variable_t = std::condition_variable;
+		using ptr_to_locked = locked_t*;
+		using unlocker_data_t = std::pair<std::unique_lock<mutex_t>, ptr_to_locked>;
+		using vault_owner_t = synchro_vault_base<TLocked, std::mutex, concepts::mutex_level::std_mutex>;
+		using locked_ptr_t = locked_ptr_base<TLocked, std::mutex, concepts::mutex_level::std_mutex>;
+		static constexpr concepts::mutex_level level = concepts::mutex_level::std_mutex;
+		friend class locked_ptr_t;
+
+		std::pair<lock_t, ctrl_block_base*> lock_impl() const
+		{
+			return std::make_pair(lock_t{ m_mutex }, this);
+		}
+		
+		ctrl_block_base() = delete;
+		ctrl_block_base(const ctrl_block_base& cb) = delete;
+		ctrl_block_base(ctrl_block_base&& cb) noexcept = delete;
+		ctrl_block_base& operator=(const ctrl_block_base& cb) = delete;
+		ctrl_block_base& operator=(ctrl_block_base&& cb) noexcept = delete;
+		~ctrl_block_base() = default;
+	protected:
+		explicit ctrl_block_base(const TLocked& locked)
+			noexcept(std::is_nothrow_copy_constructible_v<TLocked>)
+			requires std::copy_constructible<TLocked>;
+		explicit ctrl_block_base(TLocked&& locked)
+			noexcept(std::is_nothrow_move_constructible_v<TLocked>)
+			requires std::move_constructible<TLocked>;
+		template<typename...TArgs>
+		ctrl_block_base(TArgs&&... args)
+			noexcept(cjm::concepts::nothrow_constructible_from<TLocked, TArgs...>) requires std::constructible_from<TLocked, TArgs...>;
+				
+		mutable mutex_t m_mutex;
+		mutable condition_variable_t m_condition_variable;
+		locked_t m_locked;
+	};
 	template<typename TLocked>
 	class locked_ptr_base<TLocked, std::mutex, concepts::mutex_level::std_mutex>
 	{
@@ -137,6 +188,24 @@ namespace cjm::synchro::detail
 		locked_ptr_base_t* m_ptr;
 	};
 
+	template <typename TLocked>
+	ctrl_block_base<TLocked, std::mutex, concepts::mutex_level::std_mutex>::ctrl_block_base(const TLocked& locked) noexcept(std::is_nothrow_copy_constructible_v<TLocked>) requires std
+		::copy_constructible<TLocked> : m_mutex{}, m_condition_variable{}, m_locked{locked} {}
+
+	template <typename TLocked>
+	ctrl_block_base<TLocked, std::mutex, concepts::mutex_level::std_mutex>::ctrl_block_base(
+		TLocked&& locked)
+			noexcept(std::is_nothrow_move_constructible_v<TLocked>)
+			requires std::move_constructible<TLocked>
+				: m_mutex{}, m_condition_variable{}, m_locked{std::move(locked)} {}
+
+	template <typename TLocked>
+	template <typename ... TArgs>
+	ctrl_block_base<TLocked, std::mutex, concepts::mutex_level::std_mutex>::ctrl_block_base(
+		TArgs&&... args) noexcept(cjm::concepts::nothrow_constructible_from<TLocked, TArgs...>) requires std::
+		constructible_from<TLocked, TArgs...> : m_mutex{}, m_condition_variable{},
+			m_locked{ std::forward<TArgs>(args)... } {}
+	
 	template <typename TLocked>
 	auto locked_ptr_base<TLocked, std::mutex, concepts::mutex_level::std_mutex>::scoped_unlock_impl() -> scoped_unlock_t
 	{
