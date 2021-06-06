@@ -279,7 +279,8 @@ namespace cjm::synchro::concepts
 	template<mutex TMutex>
 	struct mutex_traits
 	{
-		static constexpr time_type get_time_type() noexcept;
+		template<mutex_level Level>
+		static constexpr time_type get_time_type_for_level() noexcept;
 		static constexpr mutex_level get_mutex_level() noexcept;
 		
 		template<duration TDuration, time_point TTime>
@@ -291,6 +292,64 @@ namespace cjm::synchro::concepts
 		static constexpr bool is_std_mutex = std::is_same_v<std::remove_cvref_t<std::remove_const_t<TMutex>>, std::mutex>;
 			
 	};
+
+	template <mutex TMutex>
+	template <mutex_level Level>
+	constexpr time_type mutex_traits<TMutex>::get_time_type_for_level() noexcept
+	{
+		if constexpr (Level == mutex_level::upgrade)
+		{
+			if constexpr (upgrade_mutex<TMutex>)
+			{
+				if constexpr (upgrade_timed_lockable<TMutex>)
+				{
+					if constexpr (std_upgrade_timed_lockable<TMutex>)
+						return time_type::std;
+					else if constexpr (boost_upgrade_timed_lockable<TMutex>)
+						return time_type::boost;
+					else
+						return time_type::not_timed_or_unknown;
+				}
+				return time_type::not_timed_or_unknown;
+			}
+			return time_type::not_timed_or_unknown;
+		}
+		else if constexpr (Level == mutex_level::shared)
+		{
+			if constexpr (upgrade_mutex<TMutex> || shared_mutex<TMutex>)
+			{
+				if constexpr (upgrade_timed_lockable<TMutex> || shared_timed_lockable<TMutex>)
+				{
+					if constexpr (std_shared_timed_locable<TMutex>)
+						return time_type::std;
+					else if constexpr (boost_shared_timed_lockable<TMutex>)
+						return time_type::boost;
+					else
+						return time_type::not_timed_or_unknown;
+				}
+				return time_type::not_timed_or_unknown;
+			}
+			return time_type::not_timed_or_unknown;
+		}
+		else if constexpr (Level == mutex_level::basic)
+		{
+			if constexpr (upgrade_mutex<TMutex> || shared_mutex<TMutex> || timed_mutex<TMutex>)
+			{
+				if constexpr (timed_lockable<TMutex>)
+				{
+					if constexpr (std_timed_lockable<TMutex>)
+						return time_type::std;
+					else if constexpr (boost_timed_lockable<TMutex>)
+						return time_type::boost;
+					else
+						return time_type::not_timed_or_unknown;
+				}
+			}
+		}
+
+		return time_type::not_timed_or_unknown;
+	}
+
 	template <mutex TMutex>
 	constexpr mutex_level mutex_traits<TMutex>::get_mutex_level() noexcept
 	{
@@ -303,47 +362,15 @@ namespace cjm::synchro::concepts
 		else
 			return mutex_level::basic;
 	}
-	template <mutex TMutex>
-	constexpr time_type mutex_traits<TMutex>::get_time_type() noexcept
-	{
-		constexpr mutex_level l = level_v<TMutex>;
-		if constexpr (l == mutex_level::std_mutex)
-			return time_type::not_timed_or_unknown;
-		else if constexpr (l == mutex_level::basic)
-		{
-			if constexpr (std_timed_lockable<TMutex>)
-				return time_type::std;
-			else if constexpr (boost_timed_lockable<TMutex>)
-				return time_type::boost;
-			else
-				return time_type::not_timed_or_unknown;
-		}
-		else if constexpr (l == mutex_level::shared)
-		{
-			if constexpr (std_shared_timed_locable<TMutex>)
-				return time_type::std;
-			else if constexpr (boost_shared_timed_lockable<TMutex>)
-				return time_type::boost;
-			else
-				return time_type::not_timed_or_unknown;
-		}
-		else if constexpr (l == mutex_level::upgrade)
-		{
-			if constexpr (std_upgrade_timed_lockable<TMutex>)
-				return time_type::std;
-			else if constexpr (boost_upgrade_timed_lockable<TMutex>)
-				return time_type::boost;
-			else
-				return time_type::not_timed_or_unknown;
-		}
-		return time_type::not_timed_or_unknown;
-	}
+	
 	
 	template<mutex TMutex>
 	static constexpr mutex_level level_v = mutex_traits<TMutex>::get_mutex_level();
 
-	template<mutex TMutex>
-	static constexpr time_type time_library_v = mutex_traits<TMutex>::get_time_type();
+	template<mutex TMutex, mutex_level Level>
+	static constexpr time_type time_library_v = mutex_traits<TMutex>::template get_time_type_for_level<Level>();
+
+	
 	
 	
 

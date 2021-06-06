@@ -61,18 +61,24 @@ int main()
 	static_assert(level_v<boost::upgrade_mutex> == mutex_level::upgrade);
 	static_assert(level_v<boost::shared_timed_mutex> == mutex_level::upgrade);
 
-	static_assert(time_library_v<std::mutex> == time_type::not_timed_or_unknown);
+	/*static_assert(time_library_v<std::mutex> == time_type::not_timed_or_unknown);
 	constexpr auto bm_val = time_library_v<boost::mutex>;
 	static_assert(bm_val == time_type::not_timed_or_unknown || bm_val == time_type::boost);
 	static_assert(time_library_v<std::timed_mutex> == time_type::std);
 	static_assert(time_library_v<boost::timed_mutex> == time_type::boost);
 	static_assert(time_library_v<std::shared_mutex> == time_type::not_timed_or_unknown);
 	static_assert(time_library_v<std::shared_timed_mutex> == time_type::std);
+	static_assert(mutex_traits<std::mutex>::get_time_type_for_level(mutex_level::basic) == time_type::not_timed_or_unknown);*/
 
-	auto level = mutex_traits<boost::shared_timed_mutex>::get_time_type();
+	constexpr time_type std_timed_mutex_basic_time_type = time_library_v<std::timed_mutex, mutex_level::basic>;
 
-	std::cout << "Boost shared: " << static_cast<size_t>(level) << "." << newl;
-	
+	std::cout << "Value: [" << static_cast<size_t>(std_timed_mutex_basic_time_type) << newl;
+	static_assert(std_timed_mutex_basic_time_type == time_type::std);
+	static_assert(time_library_v<std::shared_timed_mutex, mutex_level::shared> == time_type::std);
+	static_assert(time_library_v<std::shared_timed_mutex, mutex_level::basic> == time_type::std);
+	static_assert(time_library_v<boost::timed_mutex, mutex_level::basic> == time_type::boost);
+	static_assert(time_library_v<boost::shared_timed_mutex, mutex_level::basic> == time_type::boost);
+	static_assert(time_library_v<boost::shared_timed_mutex, mutex_level::shared> == time_type::boost);
 	
 	return 0;
 	
