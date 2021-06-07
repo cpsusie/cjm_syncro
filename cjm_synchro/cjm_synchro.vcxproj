@@ -176,9 +176,10 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="cjm_synchro.cpp" />
-    <ClCompile Include="cjm_synchro_syncbase.hpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="cjm_synchro.hpp" />
+    <ClInclude Include="cjm_synchro_syncbase.hpp" />
     <ClInclude Include="cjm_synchro_concepts.hpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
